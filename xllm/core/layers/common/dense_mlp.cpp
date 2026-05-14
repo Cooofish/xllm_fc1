@@ -91,12 +91,8 @@ DenseMLPImpl::DenseMLPImpl(int64_t hidden_size,
                                                  down_proj_extra_args));
 }
 
-torch::Tensor DenseMLPImpl::forward(const torch::Tensor& hidden_states) {
-  return forward(hidden_states, nullptr);
-}
-
-torch::Tensor DenseMLPImpl::forward(const torch::Tensor& hidden_states,
-                                     const FlashComm1Context* fc1_ctx) {
+torch::Tensor DenseMLPImpl::forward(torch::Tensor hidden_states,
+                                    const FlashComm1Context* fc1_ctx) {
   torch::Tensor h = hidden_states;
 
   if (fc1_ctx && fc1_ctx->is_sequence_sharded()) {
@@ -107,7 +103,8 @@ torch::Tensor DenseMLPImpl::forward(const torch::Tensor& hidden_states,
 
   if (is_smoothquant_) {
     if (fc1_ctx && fc1_ctx->is_sequence_sharded()) {
-      return down_proj_->forward(gate_up, RowParallelReduceMode::REDUCE_SCATTER, fc1_ctx);
+      return down_proj_->forward(
+          gate_up, RowParallelReduceMode::REDUCE_SCATTER, fc1_ctx);
     }
     return down_proj_->forward(gate_up);
   }
@@ -123,7 +120,8 @@ torch::Tensor DenseMLPImpl::forward(const torch::Tensor& hidden_states,
   act_->forward(gate_up, output);
 
   if (fc1_ctx && fc1_ctx->is_sequence_sharded()) {
-    return down_proj_->forward(output, RowParallelReduceMode::REDUCE_SCATTER, fc1_ctx);
+    return down_proj_->forward(
+        output, RowParallelReduceMode::REDUCE_SCATTER, fc1_ctx);
   }
   return down_proj_->forward(output);
 }

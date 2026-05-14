@@ -182,6 +182,10 @@ void DistManager::setup_multi_node_workers(
   /* TODO(CP): support smem  + CP */
   const int32_t dp_local_tp_size = world_size / dp_size;
 
+  LOG(INFO) << "[FC1_DEBUG] Parallel config: dp_size=" << dp_size
+            << ", cp_size=" << cp_size << ", ep_size=" << ep_size
+            << ", dp_local_tp_size=" << dp_local_tp_size;
+
   const auto& model_backend = options.backend();
   if (model_backend == "dit") {
     const int32_t tp_size = options.tp_size();
@@ -256,8 +260,14 @@ void DistManager::setup_multi_node_workers(
 #else
     bool use_spawn_worker = options.enable_offline_inference() && i > 0;
 #endif
+    LOG(INFO) << "[FC1_DEBUG] Creating ParallelArgs for rank " << rank
+              << " with world_size=" << world_size;
     ParallelArgs parallel_args(
         rank, world_size, dp_size, cp_size, nullptr, ep_size);
+
+    LOG(INFO) << "[FC1_DEBUG] Created ParallelArgs for rank=" << rank
+              << ": world_size=" << world_size << ", dp_size=" << dp_size
+              << ", cp_size=" << cp_size << ", ep_size=" << ep_size;
 
     servers_.emplace_back(std::make_unique<WorkerServer>(i,
                                                          master_node_addr,

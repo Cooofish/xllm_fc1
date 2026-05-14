@@ -15,6 +15,7 @@ limitations under the License.
 
 #pragma once
 
+#include <glog/logging.h>
 #include <torch/torch.h>
 
 #include <algorithm>
@@ -91,8 +92,11 @@ class Qwen3HybridModelImplBase : public Qwen3HybridModelModule {
 
     int32_t num_tokens = static_cast<int32_t>(tokens.size(0));
     bool is_prefill = input_params.batch_forward_type.is_prefill();
-    FlashComm1Context fc1_ctx = build_flash_comm1_context(
-        num_tokens, is_prefill, parallel_args_);
+    FlashComm1Context fc1_ctx =
+        build_flash_comm1_context(num_tokens, is_prefill, parallel_args_);
+
+    LOG(INFO) << "[FC1] Model forward: is_sequence_sharded="
+              << fc1_ctx.is_sequence_sharded();
 
     layer::AttentionMetadata attn_metadata =
         layer::AttentionMetadataBuilder::build(
@@ -102,7 +106,12 @@ class Qwen3HybridModelImplBase : public Qwen3HybridModelModule {
     torch::Tensor h = embed_tokens_(tokens);
 
     if (fc1_ctx.is_sequence_sharded()) {
+      LOG(INFO) << "[FC1] Model forward: executing shard_sequence on "
+                   "embedding, input shape="
+                << h.sizes();
       h = shard_sequence(h, fc1_ctx);
+      LOG(INFO) << "[FC1] Model forward: after shard_sequence, output shape="
+                << h.sizes();
     }
 
     torch::Tensor mrope_cos_sin;
@@ -127,7 +136,13 @@ class Qwen3HybridModelImplBase : public Qwen3HybridModelModule {
     h = hidden_states;
 
     if (fc1_ctx.is_sequence_sharded()) {
+      LOG(INFO) << "[FC1] Model forward: executing gather_and_unpad_sequence, "
+                   "input shape="
+                << h.sizes();
       h = gather_and_unpad_sequence(h, fc1_ctx);
+      LOG(INFO) << "[FC1] Model forward: after gather_and_unpad_sequence, "
+                   "output shape="
+                << h.sizes();
     }
 
     return ModelOutput(h);

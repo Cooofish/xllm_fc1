@@ -42,10 +42,8 @@ class DenseMLPImpl : public torch::nn::Module {
                const torch::TensorOptions& options,
                const std::string& module_prefix = "");
 
-  torch::Tensor forward(const torch::Tensor& hidden_states);
-
-  torch::Tensor forward(const torch::Tensor& hidden_states,
-                        const FlashComm1Context* fc1_ctx);
+  torch::Tensor forward(torch::Tensor hidden_states,
+                        const FlashComm1Context* fc1_ctx = nullptr);
 
   void load_state_dict(const StateDict& state_dict);
   void load_state_dict(const StateDict& state_dict,
