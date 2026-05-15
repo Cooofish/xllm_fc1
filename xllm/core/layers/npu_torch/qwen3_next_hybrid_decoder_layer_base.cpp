@@ -160,27 +160,17 @@ torch::Tensor Qwen3HybridDecoderLayerImplBase::forward(
   // Before post_norm, ensure residual shape matches x shape
   if (fc1_ctx && fc1_ctx->is_sequence_sharded() && residual.has_value() &&
       residual.value().size(0) != x.size(0)) {
-    LOG(INFO) << "[FC1] DecoderLayer: adjusting residual shape before "
-                 "post_norm, residual.size(0)="
-              << residual.value().size(0) << " vs x.size(0)=" << x.size(0);
-    // Match residual shape to x by slicing or padding
     int32_t target_size = x.size(0);
     int32_t current_size = residual.value().size(0);
 
     if (current_size > target_size) {
-      // Slice residual: take first target_size tokens for this rank
       int32_t start_idx = fc1_ctx->tp_rank * target_size;
       residual = residual.value().slice(0, start_idx, start_idx + target_size);
-      LOG(INFO) << "[FC1] DecoderLayer: sliced residual from " << current_size
-                << " to " << residual.value().size(0);
     } else if (current_size < target_size) {
-      // Pad residual with zeros at the end
       auto options = residual.value().options();
       auto padding = torch::zeros(
           {target_size - current_size, residual.value().size(-1)}, options);
       residual = torch::cat({residual.value(), padding}, 0);
-      LOG(INFO) << "[FC1] DecoderLayer: padded residual from " << current_size
-                << " to " << residual.value().size(0);
     }
   }
 

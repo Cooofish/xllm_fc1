@@ -134,12 +134,6 @@ WorkerImpl::WorkerImpl(const ParallelArgs& parallel_args,
   int32_t tp_size = parallel_args.world_size() /
                     (parallel_args.dp_size() * parallel_args.cp_size());
 
-  LOG(INFO) << "[FC1_DEBUG] WorkerImpl init: parallel_args.world_size()="
-            << parallel_args.world_size()
-            << ", parallel_args.dp_size()=" << parallel_args.dp_size()
-            << ", parallel_args.cp_size()=" << parallel_args.cp_size()
-            << ", calculated tp_size=" << tp_size;
-
   dp_driver_ = parallel_args.dp_size() > 1 &&
                parallel_args.rank() % (tp_size * parallel_args.cp_size()) == 0;
 
