@@ -103,8 +103,11 @@ torch::Tensor DenseMLPImpl::forward(torch::Tensor hidden_states,
 
   if (is_smoothquant_) {
     if (fc1_ctx && fc1_ctx->is_sequence_sharded()) {
+      LOG_FIRST_N(INFO, 16)
+          << "FC1 MMRS callsite DenseMLP.down_proj(smoothquant): input="
+          << gate_up.sizes();
       return down_proj_->forward(
-          gate_up, RowParallelReduceMode::REDUCE_SCATTER, fc1_ctx);
+          gate_up, row_parallel_reduce_mode_for_fc1(*fc1_ctx), fc1_ctx);
     }
     return down_proj_->forward(gate_up);
   }
@@ -120,8 +123,10 @@ torch::Tensor DenseMLPImpl::forward(torch::Tensor hidden_states,
   act_->forward(gate_up, output);
 
   if (fc1_ctx && fc1_ctx->is_sequence_sharded()) {
+    LOG_FIRST_N(INFO, 16)
+        << "FC1 MMRS callsite DenseMLP.down_proj: input=" << output.sizes();
     return down_proj_->forward(
-        output, RowParallelReduceMode::REDUCE_SCATTER, fc1_ctx);
+        output, row_parallel_reduce_mode_for_fc1(*fc1_ctx), fc1_ctx);
   }
   return down_proj_->forward(output);
 }

@@ -271,6 +271,8 @@ class RowParallelLinearImpl : public torch::nn::Module {
   ProcessGroup* process_group() const { return process_group_; }
 
  private:
+  torch::Tensor mmrs_weight_transposed() const;
+
   // parameter members, must be registered
   // we allocate the transpose since linear performs XA^T.
   // A^T: [out_features, in_features_per_partition]
@@ -316,6 +318,7 @@ class RowParallelLinearImpl : public torch::nn::Module {
   at::ScalarType output_dtype_;
   LinearExtraArgs linear_extra_args_;
   std::optional<std::string> resolved_weight_quant_method_;
+  mutable torch::Tensor mmrs_weight_t_;
 };
 TORCH_MODULE(RowParallelLinear);
 

@@ -112,7 +112,7 @@ torch::Tensor Qwen3MoeDecoderLayerImpl::run_moe(
   }
   return moe_mlp_->forward_experts(x, enable_moe_all2all);
 #else
-  return moe_mlp_(x, input_params);
+  return moe_mlp_->forward(x, input_params);
 #endif
 }
 

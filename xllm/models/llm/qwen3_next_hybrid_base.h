@@ -59,7 +59,8 @@ class Qwen3HybridModelImplBase : public Qwen3HybridModelModule {
   explicit Qwen3HybridModelImplBase(const ModelContext& context)
       : device_(context.get_tensor_options().device()),
         model_args_(context.get_model_args()),
-        parallel_args_(context.get_parallel_args()) {
+        parallel_args_(context.get_parallel_args()),
+        flash_comm1_options_(context.get_flash_comm1_options()) {
     auto options = context.get_tensor_options();
     auto parallel_args = context.get_parallel_args();
 
@@ -103,9 +104,11 @@ class Qwen3HybridModelImplBase : public Qwen3HybridModelModule {
             model_args_.enable_mla(),
             build_attention_mask(input_params));
     const int32_t num_tokens = static_cast<int32_t>(tokens.size(0));
-    const bool is_prefill = input_params.meta.batch_forward_type.is_prefill();
-    FlashComm1Context fc1_ctx =
-        build_flash_comm1_context(num_tokens, is_prefill, parallel_args_);
+    const auto& batch_forward_type = input_params.meta.batch_forward_type;
+    const bool is_prefill_side = batch_forward_type.no_decode();
+    FlashComm1Options fc1_options = flash_comm1_options_;
+    FlashComm1Context fc1_ctx = build_flash_comm1_context(
+        num_tokens, is_prefill_side, parallel_args_, fc1_options);
 
     torch::Tensor h;
     if (input_params.embedding.input_embedding.defined()) {
@@ -145,10 +148,19 @@ class Qwen3HybridModelImplBase : public Qwen3HybridModelModule {
     }
     auto [hidden_states, residual_out] = norm_->forward(h, residual);
     h = hidden_states;
+    bool hidden_states_selected = false;
     if (fc1_ctx.is_sequence_sharded()) {
-      h = gather_and_unpad_sequence(h, fc1_ctx);
+      if (input_params.selected_token_idxes.defined()) {
+        h = gather_selected_sequence(
+            h, fc1_ctx, input_params.selected_token_idxes);
+        hidden_states_selected = true;
+      } else {
+        h = gather_and_unpad_sequence(h, fc1_ctx);
+      }
     }
-    return ModelOutput(h);
+    ModelOutput output(h);
+    output.hidden_states_selected = hidden_states_selected;
+    return output;
   }
 
   // load the weight from the checkpoint
@@ -256,6 +268,7 @@ class Qwen3HybridModelImplBase : public Qwen3HybridModelModule {
   int32_t max_seq_len_ = 0;
   int32_t dp_size_ = 1;
   ParallelArgs parallel_args_;
+  FlashComm1Options flash_comm1_options_;
   torch::Device device_;
   torch::ScalarType dtype_ = torch::kFloat;
   layer::Qwen3NextRMSNorm norm_{nullptr};

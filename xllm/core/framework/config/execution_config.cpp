@@ -20,7 +20,7 @@ limitations under the License.
 
 DEFINE_bool(
     enable_graph,
-    false,
+    true,
     "Whether to enable graph execution for decode phase. When enabled, "
     "the engine uses graph mode (CUDA Graph for GPU, ACL Graph for NPU, "
     "MLU Graph, or DCU Graph) to optimize decode performance by reducing "

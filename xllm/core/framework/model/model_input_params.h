@@ -890,6 +890,7 @@ struct ModelInputParams {
     params.dit_forward_input = dit_forward_input.to(device);
     params.is_spec_verify = is_spec_verify;
     params.num_accepted_tokens = safe_to(num_accepted_tokens, device, true);
+    params.selected_token_idxes = safe_to(selected_token_idxes, device, true);
     for (const auto& table : multi_block_tables) {
       params.multi_block_tables.push_back(
           safe_to(table, table.options().device(torch::kCPU), true));
@@ -943,6 +944,9 @@ struct ModelInputParams {
     LOG(INFO) << "ModelInputParams: is_spec_verify is " << is_spec_verify;
     print_tensor(num_accepted_tokens,
                  "ModelInputParams: num_accepted_tokens",
+                 /*max_elements=*/4);
+    print_tensor(selected_token_idxes,
+                 "ModelInputParams: selected_token_idxes",
                  /*max_elements=*/4);
 
     if (const auto* onerec_xattn = onerec_xattention_params()) {
@@ -1015,6 +1019,9 @@ struct ModelInputParams {
   torch::Tensor mtp_shifted_token_ids;
   bool is_spec_verify = false;
   torch::Tensor num_accepted_tokens;
+  // Optional logits selection indices. FC1 can use this to gather only the
+  // hidden states needed by LM head instead of restoring the full sequence.
+  torch::Tensor selected_token_idxes;
 
   RecModelInputParams rec_params;
 

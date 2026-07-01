@@ -177,8 +177,12 @@ torch::Tensor Qwen3HybridDecoderLayerImplBase::forward(
   } else {
     if (fc1_ctx && fc1_ctx->is_sequence_sharded() &&
         residual.value().size(0) != x.size(0)) {
-      residual = maybe_chunk_residual(
-          residual.value(), fc1_ctx->tp_rank, fc1_ctx->tp_world_size);
+      residual = maybe_shard_residual(residual.value(), *fc1_ctx);
+    }
+    if (fc1_ctx && fc1_ctx->is_sequence_sharded()) {
+      CHECK_EQ(residual.value().size(0), x.size(0))
+          << "FC1 input residual and hidden states must share the same "
+          << "padded local sequence layout.";
     }
     std::tie(x, residual) = input_norm_->forward(x, residual);
   }
@@ -194,18 +198,10 @@ torch::Tensor Qwen3HybridDecoderLayerImplBase::forward(
   // Before post_norm, ensure residual shape matches x shape
   if (fc1_ctx && fc1_ctx->is_sequence_sharded() && residual.has_value() &&
       residual.value().size(0) != x.size(0)) {
-    int32_t target_size = x.size(0);
-    int32_t current_size = residual.value().size(0);
-
-    if (current_size > target_size) {
-      int32_t start_idx = fc1_ctx->tp_rank * target_size;
-      residual = residual.value().slice(0, start_idx, start_idx + target_size);
-    } else if (current_size < target_size) {
-      auto options = residual.value().options();
-      auto padding = torch::zeros(
-          {target_size - current_size, residual.value().size(-1)}, options);
-      residual = torch::cat({residual.value(), padding}, 0);
-    }
+    residual = maybe_shard_residual(residual.value(), *fc1_ctx);
+    CHECK_EQ(residual.value().size(0), x.size(0))
+        << "FC1 post-attention residual and hidden states must share the same "
+        << "padded local sequence layout.";
   }
 
   std::tie(x, residual) = post_norm_->forward(x, residual);

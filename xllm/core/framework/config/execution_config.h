@@ -54,7 +54,7 @@ class ExecutionConfig final {
     return kOptionCategory;
   }
 
-  PROPERTY(bool, enable_graph) = false;
+  PROPERTY(bool, enable_graph) = true;
 
   PROPERTY(bool, enable_graph_mode_decode_no_padding) = false;
 

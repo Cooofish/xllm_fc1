@@ -190,6 +190,8 @@ class Options {
 
   PROPERTY(bool, enable_mmrs_fusion) = true;
 
+  PROPERTY(std::string, mmrs_comm_mode) = "aiv";
+
   PROPERTY(bool, enable_profile_step_time) = false;
 
   PROPERTY(bool, enable_profile_token_budget) = false;
@@ -204,7 +206,7 @@ class Options {
   // true if enable forward interruption
   PROPERTY(bool, enable_forward_interruption) = false;
   // enable CUDA graph/ACL graph for performance optimization
-  PROPERTY(bool, enable_graph) = false;
+  PROPERTY(bool, enable_graph) = true;
   // enable graph-mode decode without padding
   PROPERTY(bool, enable_graph_mode_decode_no_padding) = false;
   // enable piecewise graph for prefill

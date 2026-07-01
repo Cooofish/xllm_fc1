@@ -115,6 +115,10 @@ class GraphPersistentParam final {
     hidden_states_.slice(/*dim=*/0, /*start=*/0, /*end=*/result_tokens)
         .copy_(value, /*non_blocking=*/true);
   }
+  bool hidden_states_selected() const { return hidden_states_selected_; }
+  void set_hidden_states_selected(bool value) {
+    hidden_states_selected_ = value;
+  }
   torch::Tensor q_seq_lens(uint32_t actual_batch_size = 0) const {
     if (actual_batch_size > 0) {
       return q_seq_lens_.slice(
@@ -236,6 +240,7 @@ class GraphPersistentParam final {
 
   // ModelOutput fields
   torch::Tensor aux_hidden_states_;
+  bool hidden_states_selected_ = false;
 
   // ATB context and operation for paged attention plan
   atb::Context* context_for_plan_;

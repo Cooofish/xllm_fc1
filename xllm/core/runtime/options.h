@@ -135,6 +135,17 @@ struct Options {
   // enable prefill-only sequence parallel.
   PROPERTY(bool, enable_prefill_sp) = false;
 
+  // Flash Communication 1 (FC1) sequence-parallel optimization.
+  PROPERTY(bool, enable_flashcomm1) = false;
+
+  PROPERTY(int32_t, flashcomm1_min_prefill_tokens) = 1000;
+
+  PROPERTY(int32_t, flashcomm1_min_decode_tokens) = 128;
+
+  PROPERTY(bool, enable_mmrs_fusion) = true;
+
+  PROPERTY(std::string, mmrs_comm_mode) = "aiv";
+
   // enable returning aux_hidden_states in graph executor output.
   PROPERTY(bool, enable_graph_aux_hidden_states) = false;
 
@@ -228,7 +239,7 @@ struct Options {
   PROPERTY(int64_t, server_idx) = 0;
 
   // enable CUDA graph/ACL graph for performance optimization
-  PROPERTY(bool, enable_graph) = false;
+  PROPERTY(bool, enable_graph) = true;
   // enable graph-mode decode without padding
   PROPERTY(bool, enable_graph_mode_decode_no_padding) = false;
   // enable piecewise graph for prefill
