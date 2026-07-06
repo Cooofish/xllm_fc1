@@ -253,9 +253,6 @@ std::optional<ForwardOutput> LLMWorkerImpl::step_internal(
   torch::Tensor selected_hidden_from_lm_head;
   if (sampling_params.selected_token_idxes.defined()) {
     torch::Tensor selected_token_idxes = sampling_params.selected_token_idxes;
-    if (model_output.hidden_states_selected) {
-      selected_token_idxes = torch::Tensor();
-    }
     if (model_output.hidden_states.defined() && selected_token_idxes.defined() &&
         selected_token_idxes.device() != model_output.hidden_states.device()) {
       selected_token_idxes = selected_token_idxes

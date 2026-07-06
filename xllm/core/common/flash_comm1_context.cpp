@@ -249,42 +249,6 @@ torch::Tensor gather_and_unpad_sequence(const torch::Tensor& input,
   return gathered;
 }
 
-torch::Tensor gather_selected_sequence(const torch::Tensor& input,
-                                       const FlashComm1Context& ctx,
-                                       const torch::Tensor& selected_idxes) {
-  if (!ctx.is_sequence_sharded() || !selected_idxes.defined()) {
-    return selected_idxes.defined()
-               ? input.index_select(/*dim=*/0,
-                                    selected_idxes.to(input.device(),
-                                                      /*non_blocking=*/false))
-               : input;
-  }
-
-  CHECK(ctx.tp_group);
-  CHECK_EQ(input.size(0), ctx.padded_local_num_tokens)
-      << "FC1 selected gather expects a padded local sequence shard.";
-  const auto selected =
-      selected_idxes.to(input.device(), torch::kLong, /*non_blocking=*/false)
-          .contiguous();
-  const int64_t num_selected = selected.size(0);
-  auto output_shape = input.sizes().vec();
-  output_shape[0] = num_selected;
-  torch::Tensor selected_hidden = torch::zeros(output_shape, input.options());
-
-  const int64_t shard_start =
-      static_cast<int64_t>(ctx.tp_rank) * ctx.padded_local_num_tokens;
-  const int64_t shard_end = shard_start + ctx.padded_local_num_tokens;
-  auto local_mask = selected.ge(shard_start).logical_and(selected.lt(shard_end));
-  auto local_positions = torch::nonzero(local_mask).flatten();
-  if (local_positions.numel() > 0) {
-    auto local_idxes = selected.index_select(0, local_positions) - shard_start;
-    auto local_hidden = input.index_select(0, local_idxes);
-    selected_hidden.index_copy_(0, local_positions, local_hidden);
-  }
-
-  return parallel_state::reduce(selected_hidden, ctx.tp_group);
-}
-
 torch::Tensor maybe_pad_for_reduce(const torch::Tensor& input,
                                    const FlashComm1Context& ctx) {
   int32_t current_size = input.size(0);

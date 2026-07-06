@@ -152,8 +152,6 @@ bool AclGraph::capture(CausalLM* model,
 
     // Store result in persistent buffer owned by NPUGraph mempool
     persistent_param_.set_hidden_states(forward_result.hidden_states);
-    persistent_param_.set_hidden_states_selected(
-        forward_result.hidden_states_selected);
     if (options.enable_graph_aux_hidden_states() &&
         forward_result.aux_hidden_states.defined()) {
       persistent_param_.set_aux_hidden_states(forward_result.aux_hidden_states);
@@ -278,9 +276,7 @@ ModelOutput AclGraph::replay(CausalLM* model,
   // Return the actual num_tokens portion of ModelOutput
   // Note: aux_hidden_states handling is done in AclGraphExecutorImpl::run()
   // since replay() doesn't have access to options
-  ModelOutput output(get_hidden_states(actual_num_tokens));
-  output.hidden_states_selected = persistent_param_.hidden_states_selected();
-  return output;
+  return ModelOutput(get_hidden_states(actual_num_tokens));
 }
 
 AclGraphExecutorImpl::AclGraphExecutorImpl(CausalLM* model,
@@ -436,10 +432,8 @@ ModelOutput AclGraphExecutorImpl::run(const torch::Tensor& tokens,
     if (options_.enable_graph_aux_hidden_states()) {
       auto aux_hidden_states = persistent_param_->aux_hidden_states(n_tokens);
       if (aux_hidden_states.defined() && aux_hidden_states.numel() > 0) {
-        ModelOutput output(
+        return ModelOutput(
             result.hidden_states, torch::Tensor(), aux_hidden_states);
-        output.hidden_states_selected = result.hidden_states_selected;
-        return output;
       }
     }
     return result;
@@ -477,19 +471,13 @@ ModelOutput AclGraphExecutorImpl::run(const torch::Tensor& tokens,
     // Return the output from capture (no need to replay since capture
     // already executed)
     auto hidden_states = graphs_[graph_key]->get_hidden_states(n_tokens);
-    const bool hidden_states_selected =
-        persistent_param_->hidden_states_selected();
     if (options_.enable_graph_aux_hidden_states()) {
       auto aux_hidden_states = persistent_param_->aux_hidden_states(n_tokens);
       if (aux_hidden_states.defined() && aux_hidden_states.numel() > 0) {
-        ModelOutput output(hidden_states, torch::Tensor(), aux_hidden_states);
-        output.hidden_states_selected = hidden_states_selected;
-        return output;
+        return ModelOutput(hidden_states, torch::Tensor(), aux_hidden_states);
       }
     }
-    ModelOutput output(hidden_states);
-    output.hidden_states_selected = hidden_states_selected;
-    return output;
+    return ModelOutput(hidden_states);
   }
 
   // Fallback to eager mode if capture fails
