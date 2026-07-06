@@ -84,10 +84,6 @@ torch::Tensor gather_sequence(const torch::Tensor& input, const FlashComm1Contex
 
 torch::Tensor gather_and_unpad_sequence(const torch::Tensor& input, const FlashComm1Context& ctx);
 
-torch::Tensor gather_selected_sequence(const torch::Tensor& input,
-                                       const FlashComm1Context& ctx,
-                                       const torch::Tensor& selected_idxes);
-
 torch::Tensor maybe_pad_for_reduce(const torch::Tensor& input, const FlashComm1Context& ctx);
 
 torch::Tensor maybe_pad_and_reduce(torch::Tensor input,

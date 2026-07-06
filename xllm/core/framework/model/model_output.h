@@ -28,7 +28,6 @@ struct ModelOutput {
   torch::Tensor residual;
   // [num_tokens, ...]
   torch::Tensor aux_hidden_states;
-  bool hidden_states_selected = false;
 
   ModelOutput() = default;
 

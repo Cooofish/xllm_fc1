@@ -148,19 +148,10 @@ class Qwen3HybridModelImplBase : public Qwen3HybridModelModule {
     }
     auto [hidden_states, residual_out] = norm_->forward(h, residual);
     h = hidden_states;
-    bool hidden_states_selected = false;
     if (fc1_ctx.is_sequence_sharded()) {
-      if (input_params.selected_token_idxes.defined()) {
-        h = gather_selected_sequence(
-            h, fc1_ctx, input_params.selected_token_idxes);
-        hidden_states_selected = true;
-      } else {
-        h = gather_and_unpad_sequence(h, fc1_ctx);
-      }
+      h = gather_and_unpad_sequence(h, fc1_ctx);
     }
-    ModelOutput output(h);
-    output.hidden_states_selected = hidden_states_selected;
-    return output;
+    return ModelOutput(h);
   }
 
   // load the weight from the checkpoint
